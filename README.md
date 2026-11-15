@@ -1,10 +1,28 @@
-# Story Timeline
+# Story Timeline · 故事时间线
 
-Story Timeline keeps the facts of a story (events, characters, relations, and who knows what and when) in SQLite, shows them as a timeline, and lets AI agents read and edit them through GraphQL.
+Story Timeline stores the facts of a story in a SQLite file and shows them as a timeline. It records **events, characters, relations, and what each character knows and when they learned it**. You and an AI agent work from the same record, so an error such as a character who knows a secret before anyone told them shows up in the data.
 
-> **Local use only.** The API has no authentication. Run it on your own machine and do not expose it to a network. See [SECURITY.md](SECURITY.md).
+- Each story is **one SQLite file** that you can copy and back up.
+- The web app shows the story as a timeline with **one lane for each character**. It also has a relation graph, a chord diagram, a causality view, and an insights page.
+- Each event has a "View story as of here" button, which shows **the story as it stands at that event**.
+- The GraphQL API has **a description on every type and field**, so that an agent can learn the schema from the API. An agent sends its changes as one mutation document, and **the API applies all of the document or none of it**.
+- **The order in which a story is told is stored separately from the order in which it happened.** In the Odyssey example, Books 9–12 are the tale that Odysseus tells in Alcinous's hall, and the timeline can show them in either order.
+- It runs on your own machine and needs no account. The interface is in English and Chinese.
 
-A pnpm workspace with two apps. The API stores story data in SQLite files with a Drizzle schema and serves it over GraphQL. The web app shows the story as a timeline and reads all data from the API.
+The project includes two examples: 《画皮》 from 聊斋志异, and Homer's Odyssey.
+
+---
+
+Story Timeline 把一个故事的事实存进一个 SQLite 文件，并以时间线的形式展示出来。它记录**事件、人物、关系，以及每个人物知道什么、何时得知**。你和 AI 智能体依据同一份记录写作，所以像“还没有人告诉他，人物就已经知道了秘密”这样的错误，会在数据里显现出来。
+
+- 每个故事是**一个 SQLite 文件**，可以直接复制和备份。
+- 网页应用把故事显示为时间线，**每个人物一条泳道**。此外还有关系图、环形图、因果视图和洞察页面。
+- 每个事件都有“从此处看故事”按钮，显示**故事在该事件发生时的状态**。
+- GraphQL API 的**每个类型和字段都带有说明**，智能体可以直接从 API 了解数据结构。智能体把修改写成一份变更文档提交，**API 要么全部执行，要么全部不执行**。
+- **故事的叙述顺序与事件的发生顺序分开存储。** 在《奥德赛》示例中，第 9–12 卷是奥德修斯在阿尔喀诺俄斯宫中讲述的往事，时间线可以按任一顺序显示。
+- 它在你自己的电脑上运行，不需要账号。界面支持中文和英文。
+
+项目自带两个示例：《聊斋志异》中的《画皮》，以及荷马史诗《奥德赛》。
 
 ## Screenshots
 
@@ -19,6 +37,10 @@ A pnpm workspace with two apps. The API stores story data in SQLite files with a
 ![Relation graph of the odyssey example project with Odysseus at the center](docs/images/odyssey-graph.png)
 
 *Odyssey: the relation graph of the main characters and their relations.*
+
+> **Local use only.** The API has no authentication. Run it on your own machine and do not expose it to a network. See [SECURITY.md](SECURITY.md).
+
+A pnpm workspace with two apps. The API stores story data in SQLite files with a Drizzle schema and serves it over GraphQL. The web app shows the story as a timeline and reads all data from the API.
 
 ```mermaid
 flowchart LR
