@@ -4,3 +4,16 @@ packages:
 
 allowBuilds:
   esbuild: true
+
+# Security overrides (see Dependabot alerts). Keep each one narrow.
+overrides:
+  # GHSA-g3hv-75wg-m249: minimatch < 11.0.1 (pulled in by shadcn > ts-morph).
+  # @ts-morph/common declares ^10.0.1 and only calls minimatch(path, pattern),
+  # which is unchanged in 11. Remove when ts-morph allows minimatch 11.
+  '@ts-morph/common>minimatch': ^11.0.1
+  # GHSA-67mh-4wv8-2f99: esbuild <= 0.24.2 (dev only: drizzle-kit >
+  # @esbuild-kit/esm-loader > @esbuild-kit/core-utils, which pins ~0.18.20).
+  # drizzle-kit 0.31.11 is the latest 0.x release. core-utils only calls
+  # transform()/transformSync(), which are compatible; drizzle-kit itself
+  # already uses esbuild ^0.25.
+  '@esbuild-kit/core-utils>esbuild': ^0.25.0
