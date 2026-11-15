@@ -1,0 +1,162 @@
+%% Source: https://claude.ai/artifact/K4hkKBwYr5qJengk9cK22k#modules
+%% Proposal decisions: 2026-10-25. Extracted: 2026-10-26.
+%% Core and all four optional modules: 13 shared tables.
+%% Solid lines show lists inside YAML records. Dashed lines show other links.
+%% Module fields are merged into their core tables.
+erDiagram
+    direction TB
+
+    %% Core
+    characters {
+        TEXT key PK "readable key"
+        TEXT id UK "UUID"
+        TEXT name
+        TEXT description
+        TEXT category "main gets a lane"
+        TEXT kind "person or group"
+        INTEGER position UK
+        TEXT color "CSS color; optional"
+    }
+
+    character_relations {
+        TEXT character_key PK,FK
+        INTEGER position PK
+        TEXT other_key FK
+        TEXT relation "free text"
+        INTEGER mutual "true in both directions"
+        INTEGER member "member of the other group"
+        TEXT since FK "start event; optional"
+        TEXT until FK "end event; optional"
+        TEXT tone "family, love, friend, work, hostile, other; optional"
+    }
+
+    events {
+        TEXT key PK
+        TEXT id UK
+        TEXT title
+        TEXT description
+        INTEGER is_core
+        INTEGER sort_order
+        TEXT act FK "setting module"
+        TEXT time "setting module"
+        TEXT place_key FK "setting module; optional"
+        TEXT confidence "references module; likely or unsure"
+    }
+
+    event_characters {
+        TEXT event_key PK,FK
+        TEXT character_key PK,FK
+        INTEGER position
+        TEXT presence "people module; body, mind, spirit, mentioned, related"
+        TEXT exit "people module; dies or leaves"
+    }
+
+    event_links {
+        TEXT event_key PK,FK
+        INTEGER position PK
+        TEXT to_key FK
+        TEXT relation "free text"
+        INTEGER mutual "true in both directions"
+        TEXT note
+        TEXT kind "cause, setup, reveal, echo; optional"
+    }
+
+    %% Setting module
+    acts {
+        TEXT name PK
+        INTEGER position UK
+        TEXT span
+        TEXT description
+    }
+
+    places {
+        TEXT key PK
+        INTEGER position UK
+        TEXT name
+        TEXT realm "physical, mind, dream, spirit"
+        TEXT parent FK "parent place; optional"
+        TEXT description
+    }
+
+    %% People module
+    character_names {
+        TEXT character_key PK,FK
+        TEXT name PK
+        INTEGER position
+        TEXT lang
+        TEXT note
+    }
+
+    %% Inner module
+    learnings {
+        TEXT key PK
+        INTEGER position UK
+        TEXT text
+        TEXT kind "knowledge, realization, idea"
+        TEXT description
+    }
+
+    learning_characters {
+        TEXT learning_key PK,FK
+        INTEGER position PK
+        TEXT character_key FK
+        TEXT since FK "learn event; optional"
+        TEXT until FK "forget event; optional"
+        TEXT time
+        TEXT note
+    }
+
+    arc_stages {
+        TEXT character_key PK,FK
+        INTEGER position PK
+        TEXT stage
+        TEXT time
+        TEXT since FK "start event; optional"
+        TEXT description
+    }
+
+    %% References module
+    sources {
+        TEXT key PK
+        INTEGER position UK "priority"
+        TEXT title
+        TEXT lang
+        TEXT location "URL or path"
+        TEXT note
+    }
+
+    event_sources {
+        TEXT event_key PK,FK
+        TEXT source_key PK,FK
+        TEXT ref
+        INTEGER position "citation order; optional"
+    }
+
+    %% Each foreign key has its own link.
+    characters ||--o{ character_relations : character_key
+    characters ||..o{ character_relations : other_key
+    events |o..o{ character_relations : since
+    events |o..o{ character_relations : until
+
+    events ||--o{ event_characters : event_key
+    characters ||..o{ event_characters : character_key
+
+    events ||--o{ event_links : event_key
+    events ||..o{ event_links : to_key
+
+    acts ||..o{ events : act
+    places |o..o{ events : place_key
+    places |o..o{ places : parent
+
+    characters ||--o{ character_names : character_key
+
+    learnings ||--o{ learning_characters : learning_key
+    characters ||..o{ learning_characters : character_key
+    events |o..o{ learning_characters : since
+    events |o..o{ learning_characters : until
+
+    characters ||--o{ arc_stages : character_key
+    events |o..o{ arc_stages : since
+
+    events ||--o{ event_sources : event_key
+    sources ||..o{ event_sources : source_key

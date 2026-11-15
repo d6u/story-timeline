@@ -1,0 +1,22 @@
+{
+  "name": "story-timeline",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --stream dev",
+    "api": "pnpm --filter @story-timeline/api",
+    "web": "pnpm --filter @story-timeline/web",
+    "db:generate": "pnpm --filter @story-timeline/api db:generate",
+    "db:create": "pnpm --filter @story-timeline/api db:create",
+    "schema": "pnpm --filter @story-timeline/api schema:export && pnpm --filter @story-timeline/web graphql:generate",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:example": "pnpm --filter @story-timeline/api db:example",
+    "db:import": "pnpm --filter @story-timeline/api db:import"
+  }
+}

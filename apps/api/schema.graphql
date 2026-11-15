@@ -1,0 +1,1323 @@
+"""
+Setting module. A large plot unit, not a chapter, a volume, or an episode. Acts can overlap in story time. Primary key: `name`. Events point to an act through `Event.actName`.
+"""
+type Act {
+  """What happens in the act."""
+  description: String
+
+  """The act name. Unique. `Event.actName` references this value."""
+  name: ID!
+
+  """Order of the act in the plot. Lower comes first. Unique when set."""
+  position: Int
+
+  """
+  A text label for the story time the act covers, such as "spring to autumn 1890".
+  """
+  span: String
+}
+
+"""
+Fields of an act for `upsertAct`. `name` is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input ActInput {
+  """What happens in the act."""
+  description: String
+
+  """The act name. Primary key. Events reference it through `actName`."""
+  name: String!
+
+  """Order of the act in the plot. Unique when set."""
+  position: Int
+
+  """A text label for the story time the act covers."""
+  span: String
+}
+
+"""
+Inner module. One stage of a character arc, in order. Primary key: (`characterKey`, `position`).
+"""
+type ArcStage {
+  """What changes in the character at this stage."""
+  description: String
+
+  """Order of the stage inside the character arc. Lower comes first."""
+  position: Int!
+
+  """
+  Key of the event at which the stage starts. Resolve against `Project.events[].key`.
+  """
+  sinceKey: ID
+
+  """A short name for the stage, such as "denial" or "return"."""
+  stage: String
+
+  """A free-text story time at which the stage starts."""
+  time: String
+}
+
+"""
+Fields of an arc stage for `upsertArcStage`. (`characterKey`, `position`) is the primary key. Omit `position` to append a new row. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input ArcStageInput {
+  """What changes in the character at this stage."""
+  description: String
+
+  """
+  Order inside the character arc. Omit to append at the end; give it to replace that row.
+  """
+  position: Int
+
+  """
+  Key of the event at which the stage starts. Must exist in `Project.events`.
+  """
+  sinceKey: ID
+
+  """A short name for the stage."""
+  stage: String
+
+  """A free-text story time at which the stage starts."""
+  time: String
+}
+
+"""
+Core module. A person or a group in the story. Primary key: `key`. Every reference to a character in this API uses `key`, not `id`.
+"""
+type Character {
+  """The stages of the character arc, in position order."""
+  arcStages: [ArcStage!]!
+
+  """
+  A free-text grouping chosen by the author, such as `main`, `minor`, `historical`. A `main` character gets its own lane in the web timeline.
+  """
+  category: String
+
+  """
+  Lane color in the web app. Any CSS color as an exact value, such as `oklch(0.52 0.13 250)`; `light-dark(<light>, <dark>)` gives one value per theme. Null means the web picks the next free palette slot in lane order.
+  """
+  color: String
+
+  """Who the character is."""
+  description: String
+
+  """
+  A stable UUID supplied by the author. May be null. Not used by reference fields.
+  """
+  id: ID
+
+  """
+  The readable key, such as `arthur`. Every `characterKey` and `otherKey` field references this value.
+  """
+  key: ID!
+
+  """Person or group. Default: `person`."""
+  kind: CharacterKind!
+
+  """
+  Every interval during which this character knows a learning. Resolve `learningKey` against `Project.learnings[].key`.
+  """
+  learnings: [LearningCharacter!]!
+
+  """The main display name. Other names are in `names`."""
+  name: String
+
+  """Other names of the character, in position order."""
+  names: [CharacterName!]!
+
+  """
+  Display order. Unique when set. The web uses it to order the timeline lanes of `main` characters.
+  """
+  position: Int
+
+  """
+  Outgoing relations only, in position order. To see relations that point at this character, scan `relations` of the other characters for `otherKey` equal to this `key`. A `mutual` row counts in both directions.
+  """
+  relations: [CharacterRelation!]!
+}
+
+"""
+Fields of a character for `upsertCharacter`. `key` is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input CharacterInput {
+  """A free-text grouping, such as `main` or `minor`."""
+  category: String
+
+  """
+  Lane color, any CSS color as an exact value, or `light-dark(<light>, <dark>)`. Null clears it.
+  """
+  color: String
+
+  """Who the character is."""
+  description: String
+
+  """A stable UUID supplied by the author. Unique when set."""
+  id: ID
+
+  """The readable key. Primary key."""
+  key: ID!
+
+  """Person or group. Default: `person`."""
+  kind: CharacterKind
+
+  """The main display name."""
+  name: String
+
+  """Display order. Unique when set."""
+  position: Int
+}
+
+"""Whether a character is one person or a group."""
+enum CharacterKind {
+  """
+  A group, such as a city, a nation, an army, a tribe, or a side. Persons join a group through a relation with `member: true`.
+  """
+  group
+
+  """One person. The default."""
+  person
+}
+
+"""
+People module. An alias, a translated name, or a later name of a character. The main display name stays in `Character.name`. Primary key: (`characterKey`, `name`).
+"""
+type CharacterName {
+  """Language code of the name, such as `en` or `ja`."""
+  lang: String
+
+  """The alternative name."""
+  name: String!
+
+  """Who uses the name, or when."""
+  note: String
+
+  """Display order among the names of the character."""
+  position: Int
+}
+
+"""
+Fields of an alternative name for `upsertCharacterName`. (`characterKey`, `name`) is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input CharacterNameInput {
+  """Language code of the name."""
+  lang: String
+
+  """The alternative name. Part of the primary key."""
+  name: String!
+
+  """Who uses the name, or when."""
+  note: String
+
+  """Display order among the names of the character."""
+  position: Int
+}
+
+"""
+Core module. A relation from the owning character to `otherKey`. The owner is the subject: with `relation: "father"` the owner is the father of the other character. Primary key: (`characterKey`, `position`). The same pair can have several rows for different labels or time intervals. A character never has a relation to itself.
+"""
+type CharacterRelation {
+  """
+  True when the owner belongs to the group `otherKey`. The other character must have `kind: group`. A member relation is never mutual.
+  """
+  member: Boolean!
+
+  """
+  True when one row covers both directions, such as `sibling` or `friend`. False when the relation reads one way only.
+  """
+  mutual: Boolean!
+
+  """
+  Key of the other character. Resolve against `Project.characters[].key`.
+  """
+  otherKey: ID!
+
+  """Order of the relation inside the owning character."""
+  position: Int!
+
+  """
+  The relation label, free text, such as `father`, `friend`, `enemy`, `member`.
+  """
+  relation: String
+
+  """
+  Key of the event at which the relation starts. Null means from the story start. Resolve against `Project.events[].key`.
+  """
+  sinceKey: ID
+
+  """
+  The explicit tone of the relation: family, love, friend, work, hostile, or other. When it is set, it wins over the `relation` word. Null means no tone is stored: classify the `relation` word instead. The web app ignores the tone of a `member` relation, because it draws membership as a faction, not as a relation line.
+  """
+  tone: RelationTone
+
+  """
+  Key of the event at which the relation ends. Null means no end is recorded. Resolve against `Project.events[].key`.
+  """
+  untilKey: ID
+}
+
+"""
+Fields of a relation for `upsertCharacterRelation`. (`characterKey`, `position`) is the primary key. Omit `position` to append a new row. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input CharacterRelationInput {
+  """
+  True when the owner belongs to the group `otherKey`. Never together with `mutual`. Default: false.
+  """
+  member: Boolean
+
+  """True when one row covers both directions. Default: false."""
+  mutual: Boolean
+
+  """
+  Key of the other character. Must exist in `Project.characters` and differ from `characterKey`. Required when the row is new.
+  """
+  otherKey: ID
+
+  """
+  Order inside the owning character. Omit to append at the end; give it to replace that row.
+  """
+  position: Int
+
+  """The relation label, free text."""
+  relation: String
+
+  """
+  Key of the event at which the relation starts. Must exist in `Project.events`.
+  """
+  sinceKey: ID
+
+  """
+  The explicit tone of the relation. Omit to keep the stored tone. Null clears it, and readers then classify the `relation` word.
+  """
+  tone: RelationTone
+
+  """
+  Key of the event at which the relation ends. Must exist in `Project.events`.
+  """
+  untilKey: ID
+}
+
+"""How sure the author is that an event happened as recorded."""
+enum Confidence {
+  """The sources support the event, but do not prove it."""
+  likely
+
+  """The event is a guess."""
+  unsure
+}
+
+"""
+Core module, with fields from the setting and references modules. An event or a scene. Each event belongs to one act and may happen at one place. Action in several places at once is several events joined by `links`. Primary key: `key`. Every reference to an event in this API uses `key`, not `id`.
+"""
+type Event {
+  """
+  Name of the act the event belongs to. Resolve against `Project.acts[].name`.
+  """
+  actName: String!
+
+  """
+  How sure the author is about the event. Null means the event is certain.
+  """
+  confidence: Confidence
+
+  """What happens in the event."""
+  description: String
+
+  """
+  A stable UUID supplied by the author. May be null. Not used by reference fields.
+  """
+  id: ID
+
+  """
+  True for an event that the main plot cannot do without. Default: false.
+  """
+  isCore: Boolean!
+
+  """
+  The readable key, such as `coronation`. Every `sinceKey`, `untilKey`, and `toKey` field references this value.
+  """
+  key: ID!
+
+  """
+  Learning intervals that start (`sinceKey`) or end (`untilKey`) at this event. Resolve `learningKey` against `Project.learnings[].key` and `characterKey` against `Project.characters[].key`.
+  """
+  learnings: [LearningCharacter!]!
+
+  """
+  Outgoing links only, in position order. To see links that point at this event, scan `links` of the other events for `toKey` equal to this `key`.
+  """
+  links: [EventLink!]!
+
+  """
+  The characters that take part, in position order. Empty means a world event: it happens without an actor and changes the setting for later events.
+  """
+  participants: [EventCharacter!]!
+
+  """
+  Key of the place where the event happens. Null when unknown or not relevant. Resolve against `Project.places[].key`.
+  """
+  placeKey: ID
+
+  """
+  Story order. Lower happens first. This can differ from the order the text tells the events. `Project.events` is already sorted by this value.
+  """
+  sortOrder: Int
+
+  """
+  The sources that give evidence for this event, in `position` order. Citations without a position come last, by `sourceKey`.
+  """
+  sources: [EventSource!]!
+
+  """
+  A free-text story time, such as `day 3, dawn` or `1890-04-12`. Compare by `sortOrder`, not by this text.
+  """
+  time: String
+
+  """A short title for the event."""
+  title: String
+}
+
+"""
+Core module, with fields from the people module. One character taking part in one event. At most one row per character per event. Primary key: (`eventKey`, `characterKey`).
+"""
+type EventCharacter {
+  """Key of the character. Resolve against `Project.characters[].key`."""
+  characterKey: ID!
+
+  """Set when the character dies or leaves the story at this event."""
+  exit: Exit
+
+  """Order of the character inside the event. Null keeps the stored order."""
+  position: Int
+
+  """
+  How the character takes part: body, mind, spirit, mentioned, or related. Null means not recorded.
+  """
+  presence: Presence
+}
+
+"""
+Fields of a participant for `upsertEventCharacter`. (`eventKey`, `characterKey`) is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input EventCharacterInput {
+  """
+  Key of the character. Part of the primary key. Must exist in `Project.characters`.
+  """
+  characterKey: ID!
+
+  """Set when the character dies or leaves the story at this event."""
+  exit: Exit
+
+  """Order of the character inside the event."""
+  position: Int
+
+  """How the character takes part."""
+  presence: Presence
+}
+
+"""
+Fields of an event for `upsertEvent`. `key` is the primary key. `actName` is required on insert. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input EventInput {
+  """
+  Name of the act. Must exist in `Project.acts`. Required when the event is new.
+  """
+  actName: String
+
+  """How sure the author is. Null means certain."""
+  confidence: Confidence
+
+  """What happens in the event."""
+  description: String
+
+  """A stable UUID supplied by the author. Unique when set."""
+  id: ID
+
+  """True for an event the main plot cannot do without. Default: false."""
+  isCore: Boolean
+
+  """The readable key. Primary key."""
+  key: ID!
+
+  """Key of the place. Must exist in `Project.places`."""
+  placeKey: ID
+
+  """Story order. Lower happens first. Pick a value between the neighbours."""
+  sortOrder: Int
+
+  """A free-text story time."""
+  time: String
+
+  """A short title for the event."""
+  title: String
+}
+
+"""
+Core module. A directed link from the owning event to `toKey` with a free-text label and an optional explicit `kind`. The same pair can have several rows with different labels, but not two rows with the same `relation` in the same direction. An event never links to itself. Primary key: (`eventKey`, `position`).
+"""
+type EventLink {
+  """
+  The explicit kind of the link: cause, setup, reveal, or echo. When it is set, it wins over the `relation` word and over `mutual`. Null means no kind is stored: classify the `relation` word instead, and read a `mutual` link as an echo.
+  """
+  kind: LinkKind
+
+  """
+  True when the link reads the same in both directions, such as `same time`.
+  """
+  mutual: Boolean!
+
+  """Why the events are linked."""
+  note: String
+
+  """Order of the link inside the owning event."""
+  position: Int!
+
+  """
+  The link label, free text, such as `causes`, `reveals`, `same time`, `flashback of`.
+  """
+  relation: String
+
+  """Key of the target event. Resolve against `Project.events[].key`."""
+  toKey: ID!
+}
+
+"""
+Fields of a link for `upsertEventLink`. (`eventKey`, `position`) is the primary key. Omit `position` to append a new row. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input EventLinkInput {
+  """
+  The explicit kind of the link. Omit to keep the stored kind. Null clears it, and readers then classify the `relation` word.
+  """
+  kind: LinkKind
+
+  """True when the link reads the same in both directions. Default: false."""
+  mutual: Boolean
+
+  """Why the events are linked."""
+  note: String
+
+  """
+  Order inside the owning event. Omit to append at the end; give it to replace that row.
+  """
+  position: Int
+
+  """
+  The link label, free text. The owning event can have only one link to the same `toKey` with the same label.
+  """
+  relation: String
+
+  """
+  Key of the target event. Must exist in `Project.events` and differ from `eventKey`. Required when the row is new.
+  """
+  toKey: ID
+}
+
+"""
+References module. One citation: an event cites a source at a location. One row per event and source. Primary key: (`eventKey`, `sourceKey`).
+"""
+type EventSource {
+  """
+  Order of the citation inside the event. Lower comes first. Null means no order is stored: such citations come after the numbered ones, by `sourceKey`.
+  """
+  position: Int
+
+  """
+  The location inside the source, such as a chapter and line range `1:3-24`, a page, or a timestamp.
+  """
+  ref: String
+
+  """Key of the cited source. Resolve against `Project.sources[].key`."""
+  sourceKey: ID!
+}
+
+"""
+Fields of a citation for `upsertEventSource`. (`eventKey`, `sourceKey`) is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input EventSourceInput {
+  """
+  Order of the citation inside the event. Lower comes first. Not unique. Null clears it.
+  """
+  position: Int
+
+  """The location inside the source."""
+  ref: String
+
+  """
+  Key of the cited source. Part of the primary key. Must exist in `Project.sources`.
+  """
+  sourceKey: ID!
+}
+
+"""How a character leaves the story at an event."""
+enum Exit {
+  """The character dies at this event. A character has at most one death."""
+  dies
+
+  """The character leaves the story at this event, but stays alive."""
+  leaves
+}
+
+"""
+Inner module. A piece of knowledge, a realization, or an idea, stored apart from the characters who know it. Primary key: `key`. `characters` lists who knows it and when.
+"""
+type Learning {
+  """
+  Who knows this learning and during which event interval, in position order. Empty when nobody knows it.
+  """
+  characters: [LearningCharacter!]!
+
+  """More detail about the learning."""
+  description: String
+
+  """
+  The readable key. `LearningCharacter.learningKey` references this value.
+  """
+  key: ID!
+
+  """Knowledge, realization, or idea. Default: `knowledge`."""
+  kind: LearningKind!
+
+  """Display order. Unique when set."""
+  position: Int
+
+  """The learning in one sentence, such as "the king is already dead"."""
+  text: String
+}
+
+"""
+Inner module. One interval during which a character knows a learning. A character that forgets and learns again has several rows. Primary key: (`learningKey`, `position`).
+"""
+type LearningCharacter {
+  """
+  Key of the character who knows the learning. Resolve against `Project.characters[].key`.
+  """
+  characterKey: ID!
+
+  """Key of the learning. Resolve against `Project.learnings[].key`."""
+  learningKey: ID!
+
+  """How the character learns it, or other remarks."""
+  note: String
+
+  """Order of this row inside the learning."""
+  position: Int!
+
+  """
+  Key of the event at which the character learns it. Null means the character knows it from the story start. Resolve against `Project.events[].key`.
+  """
+  sinceKey: ID
+
+  """A free-text story time for the interval, used when no event fits."""
+  time: String
+
+  """
+  Key of the event at which the character forgets or loses it. Null means no end is recorded. Resolve against `Project.events[].key`.
+  """
+  untilKey: ID
+}
+
+"""
+Fields of a learning interval for `upsertLearningCharacter`. (`learningKey`, `position`) is the primary key. Omit `position` to append a new row. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input LearningCharacterInput {
+  """
+  Key of the character who knows the learning. Must exist in `Project.characters`. Required when the row is new.
+  """
+  characterKey: ID
+
+  """How the character learns it, or other remarks."""
+  note: String
+
+  """
+  Order inside the learning. Omit to append at the end; give it to replace that row.
+  """
+  position: Int
+
+  """
+  Key of the event at which the character learns it. Null means from the story start.
+  """
+  sinceKey: ID
+
+  """A free-text story time, used when no event fits."""
+  time: String
+
+  """Key of the event at which the character loses it. Null means no end."""
+  untilKey: ID
+}
+
+"""
+Fields of a learning for `upsertLearning`. `key` is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input LearningInput {
+  """More detail about the learning."""
+  description: String
+
+  """The readable key. Primary key."""
+  key: ID!
+
+  """Knowledge, realization, or idea. Default: `knowledge`."""
+  kind: LearningKind
+
+  """Display order. Unique when set."""
+  position: Int
+
+  """The learning in one sentence."""
+  text: String
+}
+
+"""The kind of a learning."""
+enum LearningKind {
+  """A plan or an intention a character forms."""
+  idea
+
+  """A fact a character knows. The default."""
+  knowledge
+
+  """An insight a character reaches."""
+  realization
+}
+
+"""
+The explicit kind of an event link (`EventLink.kind`). It says what the owning event does to `toKey`. When a link has no kind, read the free-text `relation` word instead.
+"""
+enum LinkKind {
+  """
+  The owning event makes `toKey` happen, or helps it happen. Chains of causes run from the owner to `toKey`.
+  """
+  cause
+
+  """
+  The two events mirror each other or happen at the same time. Neither drives the other.
+  """
+  echo
+
+  """
+  The owning event brings `toKey` to light, such as a flashback or an explanation of an earlier event. The revealed event is `toKey`.
+  """
+  reveal
+
+  """
+  The owning event plants something that `toKey` pays off later, such as foreshadowing.
+  """
+  setup
+}
+
+"""
+Write access to the same story data `Query` reads. Every field takes a `projectId`. `upsert*` and `delete*` write one row of one table; `rename*` changes one primary key and every reference to it.
+
+How to edit a story: 1. Read the project with `Query.project` and build the key maps; never invent a key that is not in the lists. 2. Write parents before children, in this order inside one document: acts, places, characters, sources, learnings; then events; then names, relations, arc stages, participants, links, citations, learning intervals. GraphQL runs the fields of a mutation document one after the other, in document order. 3. Read the project again and check that every `*Key` resolves.
+
+Semantics: `upsert*` inserts the row when its primary key is new and otherwise updates only the fields you give (PATCH). Omitted fields keep their value; `null` clears a field. A batch that gives every primary key, including `position`, can be resent safely; a row sent without `position` is appended again on every resend (a link with a `relation` word fails on resend instead, because of the unique link rule, and the whole document rolls back). `delete*` removes one row and returns true when it existed. Nothing cascades on delete: delete child rows before their parent, or the database rejects the delete and the error says which foreign key failed. CHECK constraints (enum values such as `tone` and `kind`, `member` never together with `mutual`, no relation from a character to itself, no link from an event to itself, no place that is its own parent) and the unique link rule (one link per `eventKey`, `toKey`, and `relation`) are reported the same way; the error names the rule and `extensions.rule` holds its name. One mutation document is one transaction and writes one project: when any field fails, nothing of the document is written, `errors` names the failed field, and `data` is null. The response `extensions.transaction` is `committed` or `rolledBack`.
+
+Keys: an upsert with a new key inserts a new row; it never renames. To change a key, call `renameAct(name, newName)` or `renamePlace`, `renameCharacter`, `renameEvent`, `renameLearning`, `renameSource` with (`key`, `newKey`). Every foreign key is ON UPDATE CASCADE, so every child row and every reference (relations at both ends, links at both ends, `sinceKey`, `untilKey`, `placeKey`, `parentKey`, `actName`, citations) moves to the new key in the same statement. The old key is gone afterwards; use the new key in later fields of the same document.
+
+Link kind, relation tone, and citation order: `EventLinkInput.kind` stores the explicit kind of a link (cause, setup, reveal, echo). `CharacterRelationInput.tone` stores the explicit tone of a relation (family, love, friend, work, hostile, other). Set either one when the `relation` word does not say it clearly; `other` means none of the named tones. Null clears it, and readers then classify the `relation` word. A `member` relation needs no tone. `EventSourceInput.position` orders the citations of an event; `Event.sources` returns them by position, with unnumbered ones last.
+
+Positions: for relations, links, arc stages, and learning intervals the primary key includes `position`. Omit it to append after the last row of that parent, or read the existing rows first and give explicit positions when the batch may run twice. Participants and names have no append: give `position` by hand.
+"""
+type Mutation {
+  """Delete one act by `name`. Fails while events still reference it."""
+  deleteAct(
+    """The act name."""
+    name: String!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one arc stage by (`characterKey`, `position`)."""
+  deleteArcStage(
+    """Key of the owning character."""
+    characterKey: ID!
+
+    """The `position` of the row to delete."""
+    position: Int!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """
+  Delete one character by `key`. Fails while names, relations, arc stages, participants, or learning intervals still reference it.
+  """
+  deleteCharacter(
+    """The character key."""
+    key: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one alternative name by (`characterKey`, `name`)."""
+  deleteCharacterName(
+    """Key of the owning character."""
+    characterKey: ID!
+
+    """The alternative name."""
+    name: String!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one relation by (`characterKey`, `position`)."""
+  deleteCharacterRelation(
+    """Key of the owning character."""
+    characterKey: ID!
+
+    """The `position` of the row to delete."""
+    position: Int!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """
+  Delete one event by `key`. Fails while participants, links, citations, relations, arc stages, or learning intervals still reference it.
+  """
+  deleteEvent(
+    """The event key."""
+    key: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one participant by (`eventKey`, `characterKey`)."""
+  deleteEventCharacter(
+    """Key of the character."""
+    characterKey: ID!
+
+    """Key of the owning event."""
+    eventKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one link by (`eventKey`, `position`)."""
+  deleteEventLink(
+    """Key of the owning event."""
+    eventKey: ID!
+
+    """The `position` of the row to delete."""
+    position: Int!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one citation by (`eventKey`, `sourceKey`)."""
+  deleteEventSource(
+    """Key of the owning event."""
+    eventKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+
+    """Key of the cited source."""
+    sourceKey: ID!
+  ): Boolean!
+
+  """
+  Delete one learning by `key`. Fails while learning intervals still reference it.
+  """
+  deleteLearning(
+    """The learning key."""
+    key: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one learning interval by (`learningKey`, `position`)."""
+  deleteLearningCharacter(
+    """Key of the owning learning."""
+    learningKey: ID!
+
+    """The `position` of the row to delete."""
+    position: Int!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """
+  Delete one place by `key`. Fails while events or child places still reference it.
+  """
+  deletePlace(
+    """The place key."""
+    key: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """Delete one source by `key`. Fails while citations still reference it."""
+  deleteSource(
+    """The source key."""
+    key: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Boolean!
+
+  """
+  Rename one act: change its primary key `name` to `newName`. Every event with this `actName` follows. Returns the renamed act. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renameAct(
+    """The current act name. Must exist in `Project.acts`."""
+    name: String!
+
+    """The new act name. No other act may have it."""
+    newName: String!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Act!
+
+  """
+  Rename one character: change its primary key `key` to `newKey`. Names, relations at both ends (`characterKey` and `otherKey`), arc stages, participants, and learning intervals follow. The `id` does not change. Returns the renamed character. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renameCharacter(
+    """The current character key. Must exist in `Project.characters`."""
+    key: ID!
+
+    """The new character key. No other character may have it."""
+    newKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Character!
+
+  """
+  Rename one event: change its primary key `key` to `newKey`. Participants, links at both ends (`eventKey` and `toKey`), citations, and every `sinceKey` and `untilKey` of relations, arc stages, and learning intervals follow. The `id` does not change. Returns the renamed event. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renameEvent(
+    """The current event key. Must exist in `Project.events`."""
+    key: ID!
+
+    """The new event key. No other event may have it."""
+    newKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Event!
+
+  """
+  Rename one learning: change its primary key `key` to `newKey`. Its learning intervals follow. Returns the renamed learning. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renameLearning(
+    """The current learning key. Must exist in `Project.learnings`."""
+    key: ID!
+
+    """The new learning key. No other learning may have it."""
+    newKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Learning!
+
+  """
+  Rename one place: change its primary key `key` to `newKey`. Events (`placeKey`) and child places (`parentKey`) follow. Returns the renamed place. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renamePlace(
+    """The current place key. Must exist in `Project.places`."""
+    key: ID!
+
+    """The new place key. No other place may have it."""
+    newKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Place!
+
+  """
+  Rename one source: change its primary key `key` to `newKey`. Every citation (`EventSource.sourceKey`) follows. Returns the renamed source. Runs inside the write transaction of the document, so a later failure in the same document undoes the rename. Fails when the old key is not found or the new key already exists; nothing is renamed then.
+  """
+  renameSource(
+    """The current source key. Must exist in `Project.sources`."""
+    key: ID!
+
+    """The new source key. No other source may have it."""
+    newKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Source!
+
+  """Insert or update one act by `name`."""
+  upsertAct(
+    """The act fields."""
+    input: ActInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Act!
+
+  """
+  Insert or update one arc stage of a character by (`characterKey`, `position`). Omit `position` to append.
+  """
+  upsertArcStage(
+    """Key of the owning character."""
+    characterKey: ID!
+
+    """The arc stage fields."""
+    input: ArcStageInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): ArcStage!
+
+  """Insert or update one character by `key`."""
+  upsertCharacter(
+    """The character fields."""
+    input: CharacterInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Character!
+
+  """
+  Insert or update one alternative name of a character by (`characterKey`, `name`).
+  """
+  upsertCharacterName(
+    """Key of the owning character."""
+    characterKey: ID!
+
+    """The name fields."""
+    input: CharacterNameInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): CharacterName!
+
+  """
+  Insert or update one relation of a character by (`characterKey`, `position`). Omit `position` to append.
+  """
+  upsertCharacterRelation(
+    """Key of the owning character, the subject of the relation."""
+    characterKey: ID!
+
+    """The relation fields."""
+    input: CharacterRelationInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): CharacterRelation!
+
+  """
+  Insert or update one event by `key`. `actName` is required for a new event.
+  """
+  upsertEvent(
+    """The event fields."""
+    input: EventInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Event!
+
+  """
+  Insert or update one participant of an event by (`eventKey`, `characterKey`).
+  """
+  upsertEventCharacter(
+    """Key of the owning event."""
+    eventKey: ID!
+
+    """The participant fields."""
+    input: EventCharacterInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): EventCharacter!
+
+  """
+  Insert or update one outgoing link of an event by (`eventKey`, `position`). Omit `position` to append.
+  """
+  upsertEventLink(
+    """Key of the owning event, the source of the link."""
+    eventKey: ID!
+
+    """The link fields."""
+    input: EventLinkInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): EventLink!
+
+  """
+  Insert or update one citation of an event by (`eventKey`, `sourceKey`).
+  """
+  upsertEventSource(
+    """Key of the owning event."""
+    eventKey: ID!
+
+    """The citation fields."""
+    input: EventSourceInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): EventSource!
+
+  """Insert or update one learning by `key`."""
+  upsertLearning(
+    """The learning fields."""
+    input: LearningInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Learning!
+
+  """
+  Insert or update one learning interval by (`learningKey`, `position`). Omit `position` to append.
+  """
+  upsertLearningCharacter(
+    """The interval fields."""
+    input: LearningCharacterInput!
+
+    """Key of the owning learning."""
+    learningKey: ID!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): LearningCharacter!
+
+  """Insert or update one place by `key`."""
+  upsertPlace(
+    """The place fields."""
+    input: PlaceInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Place!
+
+  """Insert or update one source by `key`."""
+  upsertSource(
+    """The source fields."""
+    input: SourceInput!
+
+    """The project id from `projects`."""
+    projectId: ID!
+  ): Source!
+}
+
+"""
+Setting module. A physical or nonphysical place. Places form a tree through `parentKey`, such as a room inside a ship. Primary key: `key`. Events point to a place through `Event.placeKey`.
+"""
+type Place {
+  """What the place is like."""
+  description: String
+
+  """
+  The readable key. `Event.placeKey` and `Place.parentKey` reference this value.
+  """
+  key: ID!
+
+  """The display name."""
+  name: String
+
+  """
+  Key of the place that contains this place. Null for a top-level place. Resolve against `Project.places[].key`.
+  """
+  parentKey: ID
+
+  """Display order. Unique when set."""
+  position: Int
+
+  """The kind of world the place belongs to. Default: `physical`."""
+  realm: Realm!
+}
+
+"""
+Fields of a place for `upsertPlace`. `key` is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input PlaceInput {
+  """What the place is like."""
+  description: String
+
+  """The readable key. Primary key."""
+  key: ID!
+
+  """The display name."""
+  name: String
+
+  """
+  Key of the place that contains this place. Must exist in `Project.places` and differ from `key`.
+  """
+  parentKey: ID
+
+  """Display order. Unique when set."""
+  position: Int
+
+  """The kind of world the place belongs to. Default: `physical`."""
+  realm: Realm
+}
+
+"""
+How a character takes part in an event. A spirit is a kind of presence, not an exit.
+"""
+enum Presence {
+  """The character is there in person."""
+  body
+
+  """
+  Other characters speak about the character. The character is not there.
+  """
+  mentioned
+
+  """The character is there in mind only, such as in a vision or a memory."""
+  mind
+
+  """
+  The event affects the character, but the character is not there and is not mentioned.
+  """
+  related
+
+  """The character is there as a spirit or a ghost."""
+  spirit
+}
+
+"""
+One story. One project is one SQLite database file in the data folder of the server. All lists are complete, so one query can read the whole story.
+"""
+type Project {
+  """All acts, in position order."""
+  acts: [Act!]!
+
+  """All characters, in position order."""
+  characters: [Character!]!
+
+  """All events, in story order (`sortOrder`)."""
+  events: [Event!]!
+
+  """
+  The project id: the database file name without `.sqlite`. Use it as the `id` argument of `Query.project`.
+  """
+  id: ID!
+
+  """All learnings, in position order."""
+  learnings: [Learning!]!
+
+  """The display name of the project. The same as `id` for now."""
+  name: String!
+
+  """All places, in position order."""
+  places: [Place!]!
+
+  """All sources, in priority order."""
+  sources: [Source!]!
+}
+
+"""
+Read-only access to story data stored in SQLite.
+
+How to read a story: 1. Call `projects` to list the project ids. 2. Call `project(id:)` and select `acts`, `places`, `characters`, `events`, `learnings`, and `sources` with their nested lists; the whole story fits in one query. 3. Resolve every `*Key` and `actName` field on the client against the matching list: `characters[].key`, `events[].key`, `places[].key`, `learnings[].key`, `sources[].key`, `acts[].name`.
+
+Modules: core (characters, relations, events, participants, links), setting (acts, places), people (names, presence, exit), inner (learnings, arc stages), references (sources).
+"""
+type Query {
+  """
+  Read one story project. Returns null when the id is unknown. Pending migrations are applied on first access.
+  """
+  project(
+    """The project id from `projects`."""
+    id: ID!
+  ): Project
+
+  """
+  List the story projects the server can open. One project is one `*.sqlite` file in the data folder. Use `id` with `project(id:)`.
+  """
+  projects: [Project!]!
+}
+
+"""The kind of world a place belongs to."""
+enum Realm {
+  """A place inside a dream."""
+  dream
+
+  """A place inside a mind, such as a memory or a thought."""
+  mind
+
+  """A real place in the story world. The default."""
+  physical
+
+  """A place in a spirit world or an afterlife."""
+  spirit
+}
+
+"""
+The explicit tone of a character relation (`CharacterRelation.tone`). The web app groups and filters relations by tone. When a relation has no tone, readers guess it from the free-text `relation` word. Set a tone when the word does not say it clearly, such as a name, a nickname, or a word in another language.
+"""
+enum RelationTone {
+  """
+  Family by blood, marriage, or adoption: parent, child, sibling, spouse, grandparent, foster parent.
+  """
+  family
+
+  """
+  A friend, an old friend, a classmate, a companion, or a roommate, on equal terms.
+  """
+  friend
+
+  """
+  An enemy, a rival, an assassin, a spy who watches the other, or anyone who works against the other.
+  """
+  hostile
+
+  """A romantic partner: lover, fiance, fiancee, or a former partner."""
+  love
+
+  """
+  None of the named tones. Use it to stop readers from guessing a tone from the `relation` word.
+  """
+  other
+
+  """
+  A tie of rank or service: mentor and student, master and disciple, superior and subordinate, aide, follower, colleague, accomplice.
+  """
+  work
+}
+
+"""
+References module. A work or a document used as evidence for events, such as a book, a film, or a note. Primary key: `key`. Events cite a source through `Event.sources[].sourceKey`.
+"""
+type Source {
+  """The readable key. `EventSource.sourceKey` references this value."""
+  key: ID!
+
+  """Language code of the work, such as `en` or `zh`."""
+  lang: String
+
+  """Where to find the work: a URL or a file path."""
+  location: String
+
+  """A free-text note about the source."""
+  note: String
+
+  """Priority of the source. Lower is more trusted. Unique when set."""
+  position: Int
+
+  """The title of the work."""
+  title: String
+}
+
+"""
+Fields of a source for `upsertSource`. `key` is the primary key. Omit a field to keep its stored value (or take the column default on insert). Set a field to null to clear it.
+"""
+input SourceInput {
+  """The readable key. Primary key."""
+  key: ID!
+
+  """Language code of the work."""
+  lang: String
+
+  """Where to find the work: a URL or a file path."""
+  location: String
+
+  """A free-text note about the source."""
+  note: String
+
+  """Priority. Lower is more trusted. Unique when set."""
+  position: Int
+
+  """The title of the work."""
+  title: String
+}

@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+apps/web/dist/
+.DS_Store
+.claude/
+
+# Project databases stay local. Only the example databases are tracked.
+# To track another example, add a line `!apps/api/data/<name>.sqlite`.
+apps/api/data/*.sqlite
+!apps/api/data/画皮.sqlite
+!apps/api/data/odyssey.sqlite
+
+# SQLite journal and WAL files.
+*.sqlite-*
+*.db-*

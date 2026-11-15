@@ -1,0 +1,35 @@
+{
+  "name": "@story-timeline/api",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --import tsx --watch src/server.ts",
+    "start": "node --import tsx src/server.ts",
+    "schema:export": "node --import tsx scripts/export-schema.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:create": "node --import tsx scripts/create-db.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "db:example": "node --import tsx scripts/seed-example.ts",
+    "db:import": "node --import tsx scripts/import-yaml.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "@pothos/core": "^4.16.0",
+    "drizzle-orm": "0.45.4",
+    "graphql": "^16.14.2",
+    "graphql-yoga": "^6.0.1",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "0.31.11",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
