@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createClient } from '@libsql/client';
+import { sql } from 'drizzle-orm';
 import { WriteBatch } from '../src/graphql/batch.js';
 import { createApp } from '../src/graphql/yoga.js';
 import { createProjectRegistry } from '../src/projects/registry.js';
@@ -47,7 +48,8 @@ test('the write transaction connection has foreign keys on, so ON UPDATE CASCADE
     try {
       const connection = await batch.open(registry, 'demo');
       assert.ok(connection);
-      assert.equal((await connection.client.execute('PRAGMA foreign_keys')).rows[0].foreign_keys, 1);
+      // Ask through the transaction: it holds the only connection of its client.
+      assert.equal((await connection.db.get<{ foreign_keys: number }>(sql`PRAGMA foreign_keys`))?.foreign_keys, 1);
     } finally {
       await batch.finish(false);
       await registry.close();

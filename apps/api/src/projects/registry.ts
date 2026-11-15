@@ -1,9 +1,10 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDatabase } from '../db/client.js';
+import { createDatabase, type Database } from '../db/client.js';
 
-export type Connection = Awaited<ReturnType<typeof createDatabase>>;
+/** An open project file. In a mutation document, `db` is the open write transaction of the file. */
+export type Connection = Omit<Awaited<ReturnType<typeof createDatabase>>, 'db'> & { db: Database };
 
 export interface ProjectInfo {
   id: string;
