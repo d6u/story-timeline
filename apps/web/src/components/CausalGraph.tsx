@@ -170,7 +170,11 @@ export function CausalGraph({ causal, selectedId, onSelect, zoom, cursor, trail 
           {causal.acts.map((a, i) => (
             <g key={a.name}>
               <rect x={a.x0 - 14} y={-HEADER} width={a.x1 - a.x0 + 28} height={causal.height + HEADER + 14} rx={12} className={i % 2 ? 'fill-muted/40' : 'fill-muted/80'} />
-              <text x={a.x0 - 2} y={-HEADER / 2} dominantBaseline="central" className="fill-muted-foreground font-heading text-[13px] font-bold tracking-wide">{a.name}</text>
+              {/* The name is cut to its band, so it never runs over the next act; the whole name is the tooltip. */}
+              <text x={a.x0 - 2} y={-HEADER / 2} dominantBaseline="central" className="fill-muted-foreground font-heading text-[13px] font-bold tracking-wide">
+                {a.label !== a.name && <title>{a.name}</title>}
+                {a.label}
+              </text>
             </g>
           ))}
           {edges.map(({ e, side }) => {

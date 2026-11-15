@@ -69,6 +69,8 @@ export interface CausalEdge {
 /** An act's column band in the drawing. */
 export interface CausalAct {
   name: string
+  /** The name cut to fit over the band, with an ellipsis when it was cut (see `actLabel`). */
+  label: string
   x0: number
   x1: number
 }
@@ -100,15 +102,25 @@ const SWEEPS = 12
 /** The width of a short title: a CJK character counts 1, any other about half. */
 const SHORT_WIDTH = 9
 
-/** The title cut to `max` width units, with an ellipsis when it was cut. */
+/** The title cut to `max` width units, with an ellipsis when it was cut; no space is left before the ellipsis. */
 export function shortTitle(title: string, max = SHORT_WIDTH): string {
   let width = 0
   const chars = [...title]
   for (let i = 0; i < chars.length; i++) {
     width += chars[i].charCodeAt(0) > 0x2e7f ? 1 : 0.55
-    if (width > max) return `${chars.slice(0, i - 1).join('')}…`
+    if (width > max) return `${chars.slice(0, i - 1).join('').trimEnd()}…`
   }
   return title
+}
+
+/**
+ * One width unit of `shortTitle` (a CJK character) in px, for the act names: 13px bold. A Latin
+ * letter counts half of that, and the band keeps 14px of air at the end for the wider ones.
+ */
+const ACT_UNIT = 13
+/** The act name over a band from `x0` to `x1`: the band is 14px wider on each side than its nodes, less the inset of the name and some air. */
+export function actLabel(name: string, x0: number, x1: number): string {
+  return shortTitle(name, (x1 - x0 + 2) / ACT_UNIT)
 }
 
 /** Counts the links of each kind in the project, once per link. */
@@ -190,7 +202,11 @@ export function buildCausality(data: ProjectData, kinds: Set<LinkKind> = new Set
   return {
     nodes,
     edges,
-    acts: actLayers.map(a => ({ name: a.name, x0: layerX(a.first) - NODE_W / 2, x1: layerX(a.last) + NODE_W / 2 })),
+    acts: actLayers.map(a => {
+      const x0 = layerX(a.first) - NODE_W / 2
+      const x1 = layerX(a.last) + NODE_W / 2
+      return { name: a.name, label: actLabel(a.name, x0, x1), x0, x1 }
+    }),
     width: layerX(layers.length - 1) + NODE_W / 2,
     height: (rows - 1) * ROW_H + NODE_H,
     longest: longestPath(nodes.map(n => n.id), next).length,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { assemble } from '../data/assemble'
 import type { EventLink, ProjectData, StoryEvent } from '../data/types'
 import { fixture } from '../test/fixture'
-import { buildCausality, causalStart, downstream, READABLE_ZOOM, edgePath, kindCounts, linkKind, NODE_W, orderRows, rowCount, shortTitle, upstream } from './build'
+import { actLabel, buildCausality, causalStart, downstream, READABLE_ZOOM, edgePath, kindCounts, linkKind, NODE_W, orderRows, rowCount, shortTitle, upstream } from './build'
 
 /** An event with links stored on it; `build` adds the mirrored copies, as assemble does. */
 const ev = (key: string, sort: number, act: string, links: [string, string, boolean?][] = [], core = false): StoryEvent => ({
@@ -140,6 +140,25 @@ describe('shortTitle', () => {
     expect(shortTitle('第二次冲击')).toBe('第二次冲击')
     expect(shortTitle('唯在初号机接触实验中消失')).toBe('唯在初号机接触实…')
     expect(shortTitle('A short one')).toBe('A short one')
+  })
+  it('leaves no space before the ellipsis', () => {
+    expect(shortTitle('Books 9–12 · The tale', 10)).toBe('Books 9–12 · The…')
+  })
+})
+
+describe('actLabel', () => {
+  it('cuts an act name that is wider than its band, so it does not run into the next act', () => {
+    // One column: a band of 132px holds about 10 CJK characters or 18 Latin letters.
+    expect(actLabel('Books 9–12 · The tale in Alcinous’s hall', 0, NODE_W)).toBe('Books 9–12 · The…')
+    expect(actLabel('第一幕：王生在路上遇见美女并带她回家', 0, NODE_W)).toBe('第一幕：王生在路上…')
+  })
+  it('keeps a name that fits, and gives a wider band more of it', () => {
+    expect(actLabel('一 · 惑', 0, NODE_W)).toBe('一 · 惑')
+    expect(actLabel('Books 9–12 · The tale in Alcinous’s hall', 0, 3 * NODE_W)).toBe('Books 9–12 · The tale in Alcinous’s hall')
+  })
+  it('labels every act of a drawing, within its band', () => {
+    const c = buildCausality(assemble(fixture))
+    for (const a of c.acts) expect(a.label).toBe(actLabel(a.name, a.x0, a.x1))
   })
 })
 

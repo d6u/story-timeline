@@ -69,8 +69,12 @@ export function DesktopShell(s: ShellState) {
           <ToggleGroupItem value="causal" className="px-3">{t.causalView}</ToggleGroupItem>
           <ToggleGroupItem value="insights" className="px-3">{t.insightsView}</ToggleGroupItem>
         </ToggleGroup>
-        {/* Whole-project totals; below 1280px they give way to the views and the tools. */}
-        <dl className="flex shrink-0 items-center gap-5 whitespace-nowrap max-xl:hidden">
+        {/*
+          Whole-project totals, the one part of the header that gives way. Totals that do not fit wrap
+          to a second line that the fixed height hides, so the last ones go first and none is cut in
+          half. Below 1280px they all give way to the views and the tools.
+        */}
+        <dl className="flex h-5 min-w-0 flex-wrap content-start items-baseline gap-x-5 overflow-hidden whitespace-nowrap max-xl:hidden">
           {stats.map(([label, value]) => (
             <div key={label} className="flex items-baseline gap-1.5">
               <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -233,8 +237,9 @@ function CausalMain(s: ShellState) {
     <main aria-label={t.causalAria} className="island flex min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <h2 className="mx-1 shrink-0 font-heading text-base font-bold tracking-wide">{t.causalView}</h2>
-        <Badge variant="secondary" className="min-w-0 shrink font-mono font-normal">{t.causalCount(s.causal.nodes.length, s.causal.edges.length)}</Badge>
-        <span className="ml-2 truncate text-xs text-muted-foreground max-xl:hidden">{t.causalHint}</span>
+        <Badge variant="secondary" className="shrink-0 font-mono font-normal">{t.causalCount(s.causal.nodes.length, s.causal.edges.length)}</Badge>
+        {/* The hint gives way before the count. */}
+        <span className="ml-2 min-w-0 truncate text-xs text-muted-foreground max-xl:hidden">{t.causalHint}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <ToolButton label={t.zoomOut} onClick={zoomOut}><MinusIcon /></ToolButton>
           <span className="min-w-11 text-center font-mono text-xs text-muted-foreground">{Math.round(scale * 100)}%</span>
