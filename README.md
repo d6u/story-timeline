@@ -6,6 +6,20 @@ Story Timeline keeps the facts of a story (events, characters, relations, and wh
 
 A pnpm workspace with two apps. The API stores story data in SQLite files with a Drizzle schema and serves it over GraphQL. The web app shows the story as a timeline and reads all data from the API.
 
+## Screenshots
+
+![Timeline of the 画皮 example project with the event 窗窥画皮 open in the detail panel](docs/images/hua-pi-timeline.png)
+
+*画皮 (The Painted Skin): the timeline in act mode, with character lanes on the left and the selected event's details on the right.*
+
+![Timeline of the odyssey example project at the Books 9–12 flashback, with the Cyclops event open](docs/images/odyssey-timeline.png)
+
+*Odyssey: the timeline at Books 9–12, the flashback that Odysseus tells in Alcinous's hall.*
+
+![Relation graph of the odyssey example project with Odysseus at the center](docs/images/odyssey-graph.png)
+
+*Odyssey: the relation graph of the main characters and their relations.*
+
 ```mermaid
 flowchart LR
     B["Browser\napps/web (React, urql)"] -->|"POST /graphql"| V["Vite dev server\n:5173 (proxy)"]
