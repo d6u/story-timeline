@@ -1,6 +1,6 @@
 import type { Plugin } from 'graphql-yoga';
 import { GraphQLError, getOperationAST, type ExecutionResult } from 'graphql';
-import { openDatabase } from '../db/client.js';
+import { openDatabase, type Database } from '../db/client.js';
 import type { Connection, ProjectRegistry } from '../projects/registry.js';
 import type { Context } from './context.js';
 
@@ -29,14 +29,21 @@ async function lock(path: string): Promise<() => void> {
 
 interface Writer {
   projectId: string;
+  /** `db` is the open transaction; `client` is the dedicated client that holds it. */
   connection: Connection;
+  /** Ends the transaction: true commits, false rolls back. Resolves with the commit error, if any. */
+  end: (commit: boolean) => Promise<Error | undefined>;
   release: () => void;
 }
 
+/** Thrown inside the transaction callback to make drizzle roll back. */
+const ROLLBACK = Symbol('rollback');
+
 /**
  * The write transaction of one mutation document. The first field that writes a project opens a
- * dedicated connection to its file and runs `BEGIN IMMEDIATE`. Every later field, and every read
- * of that project in the same document, uses this connection, so later fields see earlier writes.
+ * dedicated connection to its file and starts a transaction with `BEGIN IMMEDIATE`. Every later
+ * field, and every read of that project in the same document, uses this transaction, so later
+ * fields see earlier writes.
  * `finish` commits when the document has no errors and rolls back otherwise.
  */
 export class WriteBatch {
@@ -79,16 +86,7 @@ export class WriteBatch {
     const writer = await pending?.catch(() => undefined);
     if (!writer) return undefined;
     try {
-      if (commit) await writer.connection.client.execute('COMMIT');
-      else await writer.connection.client.execute('ROLLBACK');
-      return undefined;
-    } catch (error) {
-      try {
-        await writer.connection.client.execute('ROLLBACK');
-      } catch {
-        // No transaction left to roll back.
-      }
-      return commit ? (error as Error) : undefined;
+      return await writer.end(commit);
     } finally {
       writer.connection.client.close();
       writer.release();
@@ -96,14 +94,42 @@ export class WriteBatch {
   }
 }
 
+/**
+ * Opens a dedicated client and starts the write transaction with drizzle's `transaction()`. Since
+ * `@libsql/client` 0.18, a `BEGIN` sent with `execute` is rolled back as soon as the statement
+ * returns its connection to the pool, so the transaction must hold its connection through the
+ * transaction API. The libsql default transaction mode is `write`, which is `BEGIN IMMEDIATE`: the
+ * write lock is taken at the start, and `timeout` makes it wait for another process.
+ * The transaction callback waits until `end` decides: it returns to commit and throws to roll back.
+ */
 async function begin(projectId: string, path: string): Promise<Writer> {
   const release = await lock(path);
   let connection: Connection | undefined;
   try {
-    connection = await openDatabase(path);
-    await connection.client.execute(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
-    await connection.client.execute('BEGIN IMMEDIATE');
-    return { projectId, connection, release };
+    const opened = await openDatabase(path, { timeout: BUSY_TIMEOUT_MS });
+    connection = opened;
+    let decide!: (commit: boolean) => void;
+    const decision = new Promise<boolean>((resolve) => (decide = resolve));
+    let started!: (tx: Database) => void;
+    let failed!: (error: unknown) => void;
+    const transaction = new Promise<Database>((resolve, reject) => ((started = resolve), (failed = reject)));
+    const done = opened.db.transaction(async (tx) => {
+      started(tx);
+      if (!(await decision)) throw ROLLBACK;
+    });
+    // A failed `BEGIN IMMEDIATE` (for example a busy file) rejects `done` before the callback runs.
+    done.catch(failed);
+    const tx = await transaction;
+    const end = async (commit: boolean) => {
+      decide(commit);
+      try {
+        await done;
+        return undefined;
+      } catch (error) {
+        return commit && error !== ROLLBACK ? (error as Error) : undefined;
+      }
+    };
+    return { projectId, connection: { ...opened, db: tx }, end, release };
   } catch (error) {
     connection?.client.close();
     release();

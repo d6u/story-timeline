@@ -4,11 +4,24 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Major updates stay ungrouped: one pull request per package, so each one is decided alone.
+    open-pull-requests-limit: 5
     groups:
       minor-and-patch:
         update-types:
           - minor
           - patch
+    ignore:
+      # The types follow the supported Node major (engines: node >=22, CI runs Node 22).
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
+      # Blocked: @0no-co/graphqlsp 1.18 (the TS plugin of gql.tada) declares the peer
+      # typescript "^5.0.0 || ^6.0.0", and `gql-tada generate output` (pnpm schema) fails on
+      # TypeScript 7 with "parseConfigFileTextToJson is not a function".
+      - dependency-name: typescript
+        versions:
+          - "7.x"
 
   - package-ecosystem: github-actions
     directory: /
