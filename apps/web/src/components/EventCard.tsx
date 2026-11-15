@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { cn } from '@/lib/utils'
 import { useT } from '../i18n'
 import type { Entry } from '../timeline/build'
+import { closedGate, hoverGate } from './hover-gate'
 import { personColor, type LaneIndex } from './people'
 
 /** The orange pill on the left edge of a core event. Drawn inside the tile, so the corners stay round. */
@@ -24,18 +25,19 @@ export function EventCard({ entry, lanes, selected, onSelect, compact = false }:
 }) {
   const t = useT()
   const { event } = entry
-  // Close the hover text on click, so it does not cover the detail panel.
-  const [hover, setHover] = useState(false)
+  // A click or a selection closes the hover text until the pointer leaves the row, so it does not cover the timeline (see `hoverGate`).
+  const [gate, dispatch] = useReducer(hoverGate, closedGate)
+  useEffect(() => { dispatch({ type: 'selected', selected }) }, [selected])
   // What the row clips, measured when the hover would open.
   const [clipped, setClipped] = useState({ title: false, text: false })
   const titleEl = useRef<HTMLSpanElement>(null)
   const textEl = useRef<HTMLSpanElement>(null)
   const cut = (el: HTMLElement | null) => Boolean(el && el.scrollWidth > el.clientWidth + 1)
   const onHover = (open: boolean) => {
-    if (!open) return setHover(false)
+    if (!open) return dispatch({ type: 'want', open, clips: false })
     const next = { title: cut(titleEl.current), text: cut(textEl.current) }
     setClipped(next)
-    setHover(next.title || next.text)
+    dispatch({ type: 'want', open, clips: next.title || next.text })
   }
   const dots = entry.characters.map(c => <i key={c.key} style={personColor(lanes, c.key)} className="block size-[7px] rounded-full bg-(--c)" />)
   const worldBadge = entry.world && <Badge variant="outline" className="shrink-0 px-1.5 font-normal">{t.world}</Badge>
@@ -67,7 +69,9 @@ export function EventCard({ entry, lanes, selected, onSelect, compact = false }:
     <Button
       variant="outline"
       aria-pressed={selected}
-      onClick={() => { setHover(false); onSelect(event.key) }}
+      onPointerDown={() => dispatch({ type: 'press' })}
+      onPointerLeave={() => dispatch({ type: 'leave' })}
+      onClick={() => { dispatch({ type: 'press' }); onSelect(event.key) }}
       className={cn(
         'relative h-8 w-full min-w-0 justify-start gap-2 px-2.5 font-normal',
         event.is_core && CORE,
@@ -81,7 +85,7 @@ export function EventCard({ entry, lanes, selected, onSelect, compact = false }:
     </Button>
   )
   return (
-    <HoverCard open={hover} onOpenChange={onHover} openDelay={400} closeDelay={80}>
+    <HoverCard open={gate.open} onOpenChange={onHover} openDelay={400} closeDelay={80}>
       <HoverCardTrigger asChild>{tile}</HoverCardTrigger>
       <HoverCardContent side="bottom" align="start" className="w-[min(32rem,90vw)] text-sm leading-relaxed whitespace-pre-line">
         {clipped.title && <p className="font-medium">{event.title}</p>}
