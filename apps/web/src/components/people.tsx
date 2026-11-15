@@ -18,14 +18,32 @@ export const PALETTE = [
   { light: 'oklch(0.52 0.05 245)', dark: 'oklch(0.76 0.04 245)' },
 ]
 
+/** The hue of an `oklch(L C H)` color, or undefined for any other color. */
+function oklchHue(color: string): number | undefined {
+  const m = /oklch\(\s*[\d.]+%?\s+[\d.]+\s+([\d.]+)/.exec(color)
+  return m ? Number(m[1]) : undefined
+}
+
+/** Hues closer than this (in degrees) read as the same color in a lane. */
+const HUE_GAP = 25
+
+/** True when a palette slot looks like an explicit color: the same value, or an oklch hue near it. */
+function slotTaken(slot: (typeof PALETTE)[number], color: string): boolean {
+  if (color.includes(slot.light) || color.includes(slot.dark)) return true
+  const hue = oklchHue(color)
+  if (hue === undefined) return false
+  const diff = Math.abs(hue - oklchHue(slot.light)!) % 360
+  return Math.min(diff, 360 - diff) < HUE_GAP
+}
+
 /**
  * Gives every lane a color. A character with an explicit color keeps it. The others take palette
- * slots in lane order, skipping a slot whose exact value an explicit color already uses, and
- * cycling past the last slot.
+ * slots in lane order, skipping a slot that an explicit color already uses (the same value, or
+ * an oklch color with a near hue), and cycling past the last slot.
  */
 export function laneColors(lanes: Character[]): LaneIndex {
   const explicit = lanes.flatMap(c => c.metadata?.color ?? [])
-  const free = PALETTE.map((_, i) => i).filter(i => !explicit.some(v => v.includes(PALETTE[i].light) || v.includes(PALETTE[i].dark)))
+  const free = PALETTE.map((_, i) => i).filter(i => !explicit.some(v => slotTaken(PALETTE[i], v)))
   const slots = free.length ? free : PALETTE.map((_, i) => i)
   let next = 0
   return new Map(lanes.map(c => [c.key, c.metadata?.color ?? `var(--person-${slots[next++ % slots.length]})`]))
