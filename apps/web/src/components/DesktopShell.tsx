@@ -237,8 +237,9 @@ function CausalMain(s: ShellState) {
     <main aria-label={t.causalAria} className="island flex min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <h2 className="mx-1 shrink-0 font-heading text-base font-bold tracking-wide">{t.causalView}</h2>
-        <Badge variant="secondary" className="min-w-0 shrink font-mono font-normal">{t.causalCount(s.causal.nodes.length, s.causal.edges.length)}</Badge>
-        <span className="ml-2 truncate text-xs text-muted-foreground max-xl:hidden">{t.causalHint}</span>
+        <Badge variant="secondary" className="shrink-0 font-mono font-normal">{t.causalCount(s.causal.nodes.length, s.causal.edges.length)}</Badge>
+        {/* The hint gives way before the count. */}
+        <span className="ml-2 min-w-0 truncate text-xs text-muted-foreground max-xl:hidden">{t.causalHint}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <ToolButton label={t.zoomOut} onClick={zoomOut}><MinusIcon /></ToolButton>
           <span className="min-w-11 text-center font-mono text-xs text-muted-foreground">{Math.round(scale * 100)}%</span>
