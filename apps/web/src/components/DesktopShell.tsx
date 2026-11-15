@@ -69,8 +69,12 @@ export function DesktopShell(s: ShellState) {
           <ToggleGroupItem value="causal" className="px-3">{t.causalView}</ToggleGroupItem>
           <ToggleGroupItem value="insights" className="px-3">{t.insightsView}</ToggleGroupItem>
         </ToggleGroup>
-        {/* Whole-project totals; below 1280px they give way to the views and the tools. */}
-        <dl className="flex shrink-0 items-center gap-5 whitespace-nowrap max-xl:hidden">
+        {/*
+          Whole-project totals, the one part of the header that gives way. Totals that do not fit wrap
+          to a second line that the fixed height hides, so the last ones go first and none is cut in
+          half. Below 1280px they all give way to the views and the tools.
+        */}
+        <dl className="flex h-5 min-w-0 flex-wrap content-start items-baseline gap-x-5 overflow-hidden whitespace-nowrap max-xl:hidden">
           {stats.map(([label, value]) => (
             <div key={label} className="flex items-baseline gap-1.5">
               <dt className="text-xs text-muted-foreground">{label}</dt>

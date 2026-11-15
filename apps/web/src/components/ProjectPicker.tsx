@@ -18,7 +18,9 @@ export function ProjectPicker({ projects, value, onChange, subtitle }: {
   const title = subtitle !== undefined
   const name = projects.find(p => p.id === value)?.name
   return (
-    <div className={cn('flex min-w-0 items-center gap-3', title && 'gap-0')}>
+    // On the desktop the picker keeps its own width: the trigger truncates a long name, and the
+    // header's totals give way instead, so the views never slide over the picker.
+    <div className={cn('flex items-center gap-3', title ? 'min-w-0 gap-0' : 'shrink-0')}>
       {/* The mark gives way below 1280px, so the views and the tools keep their room. */}
       {!title && <p className="font-mono text-[11px] tracking-[0.12em] whitespace-nowrap text-muted-foreground max-xl:hidden">STORY TIMELINE</p>}
       <Select value={value} onValueChange={onChange}>
