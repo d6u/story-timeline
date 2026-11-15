@@ -2,6 +2,8 @@
 
 Story Timeline stores the facts of a story in a SQLite file and shows them as a timeline. It records **events, characters, relations, and what each character knows and when they learned it**. You and an AI agent work from the same record, so an error such as a character who knows a secret before anyone told them shows up in the data.
 
+![Screen recording: the Odyssey example in Story Timeline. The timeline opens the Cyclops event, moves the story slider so later events fade, switches between act order and time order, shows the relation graph, then switches to the 画皮 example in Chinese](docs/images/demo.gif)
+
 - Each story is **one SQLite file** that you can copy and back up.
 - The web app shows the story as a timeline with **one lane for each character**. It also has a relation graph, a chord diagram, a causality view, and an insights page.
 - Each event has a "View story as of here" button, which shows **the story as it stands at that event**.
