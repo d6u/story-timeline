@@ -7,7 +7,7 @@ export interface ProjectOption {
   name: string
 }
 
-/** Desktop: the NOVEL WRITER mark and a select. Phone (`title`): the name as a serif title with a subtitle line. */
+/** Desktop: the STORY TIMELINE mark and a select. Phone (`title`): the name as a serif title with a subtitle line. */
 export function ProjectPicker({ projects, value, onChange, subtitle }: {
   projects: ProjectOption[]
   value: string
@@ -20,7 +20,7 @@ export function ProjectPicker({ projects, value, onChange, subtitle }: {
   return (
     <div className={cn('flex min-w-0 items-center gap-3', title && 'gap-0')}>
       {/* The mark gives way below 1280px, so the views and the tools keep their room. */}
-      {!title && <p className="font-mono text-[11px] tracking-[0.12em] whitespace-nowrap text-muted-foreground max-xl:hidden">NOVEL WRITER</p>}
+      {!title && <p className="font-mono text-[11px] tracking-[0.12em] whitespace-nowrap text-muted-foreground max-xl:hidden">STORY TIMELINE</p>}
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger
           aria-label={title ? t.switchProject : t.project}

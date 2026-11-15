@@ -12,6 +12,11 @@ describe('laneColors', () => {
     // Slot 1 is taken by b's exact value, so c skips to slot 2.
     expect(colors.get('c')).toBe('var(--person-2)')
   })
+  it('skips a slot whose hue is near an explicit oklch color', () => {
+    // 画皮: 王生 has oklch(0.55 0.13 250), near slot 0 (hue 250), so 乞人 must not get slot 0.
+    const colors = laneColors([lane('wang', 'oklch(0.55 0.13 250)'), lane('beggar')])
+    expect(colors.get('beggar')).toBe('var(--person-1)')
+  })
   it('cycles past the last slot', () => {
     const lanes = Array.from({ length: 9 }, (_, i) => lane(`p${i}`))
     expect(laneColors(lanes).get('p8')).toBe('var(--person-0)')
